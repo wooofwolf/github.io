@@ -1,219 +1,164 @@
-﻿const { Player, stringToDataUrl } = TextAliveApp;
+﻿import P5 from "p5";
+import { Player, Ease } from "textalive-app-api";
 
-// TextAlive Player を初期化
+// プレイヤーの初期化 / Initialize TextAlive Player
 const player = new Player({
     // トークンは https://developer.textalive.jp/profile で取得したものを使う
-    app: { token: "test" },
+    app: { token: "ZkFzIGUn8CuGxtOC" },
     mediaElement: document.querySelector("#media"),
-    mediaBannerPosition: "bottom right"
-
-    // オプション一覧
-    // https://developer.textalive.jp/packages/textalive-app-api/interfaces/playeroptions.html
 });
 
-const overlay = document.querySelector("#overlay");
-const bar = document.querySelector("#bar");
-const textContainer = document.querySelector("#text");
-const seekbar = document.querySelector("#seekbar");
-const paintedSeekbar = seekbar.querySelector("div");
-let b, c;
-
+// リスナの登録 / Register listeners
 player.addListener({
-    /* APIの準備ができたら呼ばれる */
-    onAppReady(app) {
-        if (app.managed) {
-            document.querySelector("#control").className = "disabled";
-        }
-        if (!app.songUrl) {
-            document.querySelector("#media").className = "disabled";
-
-            // ストリートライト / 加賀(ネギシャワーP)
-            player.createFromSongUrl("https://piapro.jp/t/ULcJ/20250205120202", {
+    onAppReady: (app) => {
+        if (!app.managed) {
+            // アリフレーション / 雨良 Amala
+            player.createFromSongUrl("https://piapro.jp/t/SuQO/20250127235813", {
                 video: {
                     // 音楽地図訂正履歴
-                    beatId: 4694275,
-                    chordId: 2830730,
-                    repetitiveSegmentId: 2946478,
+                    beatId: 4694276,
+                    chordId: 2830731,
+                    repetitiveSegmentId: 2946479,
 
-                    // 歌詞URL: https://piapro.jp/t/DPXV
-                    // 歌詞タイミング訂正履歴: https://textalive.jp/lyrics/piapro.jp%2Ft%2FULcJ%2F20250205120202
-                    lyricId: 67810,
-                    lyricDiffId: 20654
-                }
+                    // 歌詞URL: https://piapro.jp/t/GbYz
+                    // 歌詞タイミング訂正履歴: https://textalive.jp/lyrics/piapro.jp%2Ft%2FSuQO%2F20250127235813
+                    lyricId: 67811,
+                    lyricDiffId: 20655
+                },
             });
+            document.querySelector("#control").className = "active";
+        } else {
+            document.querySelector("#control").className = "inactive";
         }
     },
 
-    /* 楽曲が変わったら呼ばれる */
-    onAppMediaChange() {
-        // 画面表示をリセット
-        overlay.className = "";
-        bar.className = "";
-        resetChars();
+    onTextLoad: (body) => {
+        // Webフォントを確実に読み込むためDOM要素に歌詞を貼り付ける
+        document.querySelector("#dummy").textContent = body?.text;
     },
 
-    /* 楽曲情報が取れたら呼ばれる */
-    onVideoReady(video) {
-        // 楽曲情報を表示
-        document.querySelector("#artist span").textContent =
-            player.data.song.artist.name;
-        document.querySelector("#song span").textContent = player.data.song.name;
-
-        // 最後に表示した文字の情報をリセット
-        c = null;
-    },
-
-    /* 再生コントロールができるようになったら呼ばれる */
-    onTimerReady() {
-        overlay.className = "disabled";
-        document.querySelector("#control > a#play").className = "";
-        document.querySelector("#control > a#stop").className = "";
-    },
-
-    /* 再生位置の情報が更新されたら呼ばれる */
-    onTimeUpdate(position) {
-        // シークバーの表示を更新
-        paintedSeekbar.style.width = `${parseInt((position * 1000) / player.video.duration) / 10
-            }%`;
-
-        // 現在のビート情報を取得
-        let beat = player.findBeat(position);
-        if (b !== beat) {
-            if (beat) {
-                requestAnimationFrame(() => {
-                    bar.className = "active";
-                    requestAnimationFrame(() => {
-                        bar.className = "active beat";
-                    });
-                });
-            }
-            b = beat;
+    onVideoReady: () => {
+        if (!player.app.managed) {
+            document.querySelector("#message").className = "active";
         }
+        document.querySelector("#overlay").className = "inactive";
+    },
 
-        // 歌詞情報がなければこれで処理を終わる
-        if (!player.video.firstChar) {
+    onPlay: () => {
+        document.querySelector("#message").className = "inactive";
+        console.log("player.onPlay");
+    },
+
+    onPause: () => {
+        if (!player.app.managed) {
+            document.querySelector("#message").className = "active";
+        }
+        console.log("player.onPause");
+    },
+
+    onSeek: () => {
+        console.log("player.onSeek");
+    },
+
+    onStop: () => {
+        console.log("player.onStop");
+    },
+});
+
+// 再生ボタン
+document.querySelector("#play").addEventListener("click", () => {
+    player.requestPlay();
+});
+
+// 停止ボタン
+document.querySelector("#stop").addEventListener("click", () => {
+    player.requestStop();
+});
+
+// p5.js を初期化
+new P5((p5) => {
+    // キャンバスの大きさなどを計算
+    const width = Math.min(640, window.innerWidth);
+    const height = Math.min(270, window.innerHeight);
+    const margin = 30;
+    const numChars = 10;
+    const textAreaWidth = width - margin * 2;
+
+    // キャンバスを作成
+    p5.setup = () => {
+        p5.createCanvas(width, height);
+        p5.colorMode(p5.HSB, 100);
+        p5.frameRate(30);
+        p5.background(40);
+        p5.noStroke();
+        p5.textFont("Noto Sans JP");
+        p5.textAlign(p5.CENTER, p5.CENTER);
+    };
+
+    // ビートにあわせて背景を、発声にあわせて歌詞を表示
+    p5.draw = () => {
+        // プレイヤーが準備できていなかったら何もしない
+        if (!player || !player.video) {
             return;
         }
+        const position = player.timer.position;
 
-        // 巻き戻っていたら歌詞表示をリセットする
-        if (c && c.startTime > position + 1000) {
-            resetChars();
+        // 背景
+        p5.background(40);
+        const beat = player.findBeat(position);
+        if (beat) {
+            const progress = beat.progress(position);
+            const rectHeight = Ease.quintIn(progress) * height;
+            p5.fill(0, 0, 0, Ease.quintOut(progress) * 60);
+            p5.rect(0, rectHeight, width, height - rectHeight);
         }
 
-        // 500ms先に発声される文字を取得
-        let current = c || player.video.firstChar;
-        while (current && current.startTime < position + 500) {
-            // 新しい文字が発声されようとしている
-            if (c !== current) {
-                newChar(current);
-                c = current;
+        // 歌詞
+        // - 再生位置より 100 [ms] 前の時点での発声文字を取得
+        // - { loose: true } にすることで発声中でなければ一つ後ろの文字を取得
+        let char = player.video.findChar(position - 100, { loose: true });
+
+        if (char) {
+            // 位置決めのため、文字が歌詞全体で何番目かも取得しておく
+            let index = player.video.findIndex(char);
+
+            while (char) {
+                if (char.endTime + 160 < position) {
+                    // これ以降の文字は表示する必要がない
+                    break;
+                }
+                if (char.startTime < position + 100) {
+                    const x = ((index % numChars) + 0.5) * (textAreaWidth / numChars);
+                    let transparency,
+                        y = 0,
+                        size = 39;
+
+                    // 100 [ms] かけてフェードインしてくる
+                    if (position < char.startTime) {
+                        const progress = 1 - (char.startTime - position) / 100;
+                        const eased = Ease.circIn(progress);
+                        transparency = progress;
+                        size = 39 * eased + Math.min(width, height) * (1 - eased);
+                    }
+                    // 160 [ms] かけてフェードアウトする
+                    else if (char.endTime < position) {
+                        const progress = (position - char.endTime) / 160;
+                        const eased = Ease.quintIn(progress);
+                        transparency = 1 - eased;
+                        y = -eased * (height / 2);
+                    }
+                    // 発声区間中は完全に不透明
+                    else {
+                        transparency = 1;
+                    }
+
+                    p5.fill(0, 0, 100, transparency * 100);
+                    p5.textSize(size);
+                    p5.text(char.text, margin + x, height / 2 + y);
+                }
+                char = char.next;
+                index++;
             }
-            current = current.next;
         }
-    },
-
-    /* 楽曲の再生が始まったら呼ばれる */
-    onPlay() {
-        const a = document.querySelector("#control > a#play");
-        while (a.firstChild) a.removeChild(a.firstChild);
-        a.appendChild(document.createTextNode("\uf28b"));
-    },
-
-    /* 楽曲の再生が止まったら呼ばれる */
-    onPause() {
-        const a = document.querySelector("#control > a#play");
-        while (a.firstChild) a.removeChild(a.firstChild);
-        a.appendChild(document.createTextNode("\uf144"));
-    }
+    };
 });
-
-/* 再生・一時停止ボタン */
-document.querySelector("#control > a#play").addEventListener("click", (e) => {
-    e.preventDefault();
-    if (player) {
-        if (player.isPlaying) {
-            player.requestPause();
-        } else {
-            player.requestPlay();
-        }
-    }
-    return false;
-});
-
-/* 停止ボタン */
-document.querySelector("#control > a#stop").addEventListener("click", (e) => {
-    e.preventDefault();
-    if (player) {
-        player.requestStop();
-
-        // 再生を停止したら画面表示をリセットする
-        bar.className = "";
-        resetChars();
-    }
-    return false;
-});
-
-/* シークバー */
-seekbar.addEventListener("click", (e) => {
-    e.preventDefault();
-    if (player) {
-        player.requestMediaSeek(
-            (player.video.duration * e.offsetX) / seekbar.clientWidth
-        );
-    }
-    return false;
-});
-
-/**
- * 新しい文字の発声時に呼ばれる
- * Called when a new character is being vocalized
- */
-function newChar(current) {
-    // 品詞 (part-of-speech)
-    // https://developer.textalive.jp/packages/textalive-app-api/interfaces/iword.html#pos
-    const classes = [];
-    if (
-        current.parent.pos === "N" ||
-        current.parent.pos === "PN" ||
-        current.parent.pos === "X"
-    ) {
-        classes.push("noun");
-    }
-
-    // フレーズの最後の文字か否か
-    if (current.parent.parent.lastChar === current) {
-        classes.push("lastChar");
-    }
-
-    // 英単語の最初か最後の文字か否か
-    if (current.parent.language === "en") {
-        if (current.parent.lastChar === current) {
-            classes.push("lastCharInEnglishWord");
-        } else if (current.parent.firstChar === current) {
-            classes.push("firstCharInEnglishWord");
-        }
-    }
-
-    // noun, lastChar クラスを必要に応じて追加
-    const div = document.createElement("div");
-    div.appendChild(document.createTextNode(current.text));
-
-    // 文字を画面上に追加
-    const container = document.createElement("div");
-    container.className = classes.join(" ");
-    container.appendChild(div);
-    container.addEventListener("click", () => {
-        player.requestMediaSeek(current.startTime);
-    });
-    textContainer.appendChild(container);
-}
-
-/**
- * 歌詞表示をリセットする
- * Reset lyrics view
- */
-function resetChars() {
-    c = null;
-    while (textContainer.firstChild)
-        textContainer.removeChild(textContainer.firstChild);
-}
